@@ -6,8 +6,12 @@ import scipy.optimize as oti
 
 
 def main():
+    # x = np.linspace(1,4,4)
+    # print(f_objetivo(x, (x, x))
+    # input()
+    # return
     dim = 2 #Dimensão do Espaço
-    numero_de_pontos = 400 #Numero de Pontos Para o Aprendizado
+    numero_de_pontos = 100 #Numero de Pontos Para o Aprendizado
 
     #Intervalo dos Pontos gerados
     l_inf = -100
@@ -15,7 +19,7 @@ def main():
 
     def classifica(v):
         a = 1.0
-        b = -1.0
+        b = -5.0
         c = 0.0
         delta = 10
         if np.dot(np.array([a,b]), v) + c > delta:
@@ -29,19 +33,34 @@ def main():
     vetores = [v for v in vetores if classifica(v) != 0]
     vet_aleatorio = [classifica(v) for v in vetores]
 
-    w, b = perceptron(vetores, vet_aleatorio)
-    #ac, ab = classificar(w, b, vetores, dim)
+    res = otimizar(vetores, vet_aleatorio)
+    w = sum([y*a*x for x,y,a in zip(vetores, vet_aleatorio, res.x)])
+    # w, b = perceptron(vetores, vet_aleatorio)
+    # #ac, ab = classificar(w, b, vetores, dim)
     ac = [v for v,c in zip(vetores, vet_aleatorio) if c == 1]
     ab = [v for v,c in zip(vetores, vet_aleatorio) if c == -1]
+    b = -0.5*(max([w.dot(x) for x in ab]) + min([w.dot(x) for x in ac]))
     plotar(ac, ab, w, b, l_inf, l_sup, dim)
 
 
-def otimizar(w, b):
-    restr = ({'type': 'ineq', 'fun': lambda x: w + b -1})
-    oti.minimize(f_objetivo())
+def otimizar(x, y):
+    args = (x,y)
+    alpha0 = np.zeros(len(x))
+    bounds = len(x)*[(0, None)]
+    constraint = oti.LinearConstraint(np.asmatrix(y), 0.0, 0.0)
+    res = oti.minimize(f_objetivo, alpha0, args, bounds=bounds, constraints=constraint)
+    return res
 
-def f_objetivo(w, b):
-    return 1/2*norma(w)**2-alpha*(w + b -1)
+def f_objetivo(alpha, *args):
+    x = args[0]
+    y = args[1]
+    f = 0.0
+    for xi, yi, ai in zip(x,y,alpha):
+        for xj, yj, aj in zip(x,y,alpha):
+            f += yi*yj*ai*aj*np.dot(xi, xj)
+    f *= 0.5
+    f -= sum(alpha)
+    return f
 
 
 
@@ -124,7 +143,7 @@ def classificar(w, b, dados, dimensao):
 def plotar(acima, abaixo, hiper, vies, lim_abaixo, lim_acima, dimensao):
     fig, ax = plt.subplots()
 
-    ax.plot([lim_abaixo, lim_acima], [lim_abaixo, lim_acima], 'g-')
+    # ax.plot([lim_abaixo, lim_acima], [lim_abaixo, lim_acima], 'g-')
 
     ax.plot([x[0] for x in acima], [x[1] for x in acima], '.')
     ax.plot([x[0] for x in abaixo], [x[1] for x in abaixo], 'x')
@@ -154,7 +173,8 @@ def plotar(acima, abaixo, hiper, vies, lim_abaixo, lim_acima, dimensao):
     x,y = pontos_hiperplano(vies1, hiper, lim_abaixo, lim_acima)
     ax.plot(x, y, 'b--')
 
-    x,y = pontos_hiperplano((vies1+vies2)/2, hiper, lim_abaixo, lim_acima)
+    # x,y = pontos_hiperplano((vies1+vies2)/2, hiper, lim_abaixo, lim_acima)
+    x,y = pontos_hiperplano(vies, hiper, lim_abaixo, lim_acima)
     ax.plot(x, y, 'k-')
 
     plt.show()
